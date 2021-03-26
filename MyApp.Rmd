@@ -1,0 +1,102 @@
+---
+title: "Developing Data Product"
+author: "Avanindra Nath Thakur"
+date: "26/03/2021"
+output: html_document
+runtime: shiny
+---
+
+
+
+
+```{r MPG, echo=TRUE}
+library(shiny)
+library(datasets)
+library(ggpubr)
+
+mpgData <- mtcars
+mpgData$am <- factor(mpgData$am, labels = c("Automatic", "Manual"))
+
+shinyUI(
+  navbarPage("Shiny App",
+             tabPanel("Exploratory data Analysis",
+                      fluidPage(
+                        titlePanel("Determinants of Miles per Gallen(MPG)"),
+                        sidebarLayout(
+                          sidebarPanel(
+                            selectInput("variable", "Variable:",
+                                        c("Number of cylinders" = "cyl",
+                                          "Displacement (cu.in.)" = "disp",
+                                          "Gross horsepower" = "hp",
+                                          "Rear axle ratio" = "drat",
+                                          "Weight (lb/1000)" = "wt",
+                                          "1/4 mile time" = "qsec",
+                                          "V/S" = "vs",
+                                          "Transmission" = "am",
+                                          "Number of forward gears" = "gear",
+                                          "Number of carburetors" = "carb"
+                                        )),
+                            
+                            checkboxInput("outliers", "Show BoxPlot's outliers", FALSE)
+                          ),
+                          
+                          mainPanel(
+                            h3(textOutput("caption")),
+                            
+                            tabsetPanel(type = "tabs", 
+                                        tabPanel("BoxPlot", plotOutput("mpgBoxPlot")),
+                                        tabPanel("Linear model", 
+                                                 plotOutput("mpgPlot"),
+                                                 verbatimTextOutput("fit")
+                                        )
+                            )
+                          )
+                        )
+                      )
+             )
+  )
+)
+
+
+
+shinyServer(function(input, output) {
+  
+  formulaText <- reactive({
+    paste("mpg ~", input$variable)
+  })
+  
+  formulaTextPoint <- reactive({
+    paste("mpg ~", "as.integer(", input$variable, ")")
+  })
+  
+  fit <- reactive({
+    lm(as.formula(formulaTextPoint()), data=mpgData)
+  })
+  
+  output$caption <- renderText({
+    formulaText()
+  })
+  
+  output$mpgBoxPlot <- renderPlot({
+    boxplot(as.formula(formulaText()), 
+            data = mpgData,
+            outline = input$outliers)
+  })
+  
+  output$fit <- renderPrint({
+    summary(fit())
+  })
+  
+  output$mpgPlot <- renderPlot({
+    with(mpgData, {
+      plot(as.formula(formulaTextPoint()))
+      abline(fit(), col=2)
+    })
+  })
+  
+})
+```
+
+
+
+
